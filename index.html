@@ -11,7 +11,7 @@
             background: #333; 
             overflow: hidden; 
             font-family: 'Microsoft YaHei', sans-serif; 
-            touch-action: none; /* Prevent browser zooming/scrolling */
+            touch-action: none; /* 防止浏览器缩放/滚动 */
         }
         #gameCanvas { 
             display: block; 
@@ -68,7 +68,7 @@
         }
         .btn:hover { background: #ff6666; }
         
-        /* On-screen controls */
+        /* 屏幕上的控制按钮 */
         .controls { 
             position: absolute; 
             bottom: 30px; 
@@ -139,26 +139,26 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // Game State
+        // 游戏状态
         let isGameOver = false;
         let score = 0;
         let maxScore = 0;
         let lanes = [];
         let player = {
             gridX: 0,
-            gridY: 0, // relative to current view
+            gridY: 0, // 相对于当前视图
             x: 0,
             y: 0,
-            progress: 0 // animation
+            progress: 0 // 动画
         };
         
-        // Configuration
+        // 配置
         const GRID_SIZE = 50;
-        const GRID_COLS = 9; // Odd number keeps center aligned
+        const GRID_COLS = 9; // 奇数保持中心对齐
         let CANVAS_WIDTH, CANVAS_HEIGHT;
         let cameraY = 0;
         
-        // Assets / Styles
+        // 资源 / 样式
         const COLORS = {
             grass: '#8bc34a',
             road: '#555',
@@ -168,7 +168,7 @@
             chicken: '#fff'
         };
 
-        // Input handling
+        // 输入处理
         let keys = {};
         
         function resize() {
@@ -176,12 +176,11 @@
             CANVAS_HEIGHT = window.innerHeight;
             canvas.width = CANVAS_WIDTH;
             canvas.height = CANVAS_HEIGHT;
-            // Recenter player visually if needed (not affecting logic)
         }
         window.addEventListener('resize', resize);
         resize();
 
-        // Classes
+        // 类
         class Lane {
             constructor(gridY) {
                 this.gridY = gridY;
@@ -192,34 +191,31 @@
             }
 
             getType(y) {
-                if (y < 3) return 'grass'; // Start area
+                if (y < 3) return 'grass'; // 起始区域
                 const r = Math.random();
                 if (r < 0.3) return 'grass';
                 if (r < 0.8) return 'road';
-                return 'water'; // Simple implementation: no water for now to keep it "Pure H5" simpler, sticking to road/grass like original prompt ref. Or add water if we have logs.
-                // The original Three.js code had cars, trucks, forest (grass with trees). No water. Let's stick to that.
+                return 'water';
             }
-            // For this simpler version, let's stick to Road and Grass to match the original reference provided.
-            // Original: field/grass, forest(with trees), car, truck.
             
             setupObstacles() {
                 if (this.type === 'road') {
-                    // Add cars
+                    // 添加汽车
                     let count = Math.floor(Math.random() * 2) + 1;
                     for(let i=0; i<count; i++) {
                         this.obstacles.push({
                             x: Math.random() * GRID_COLS * GRID_SIZE,
-                            width: GRID_SIZE * (Math.random() < 0.3 ? 2 : 1.2), // Truck vs Car
+                            width: GRID_SIZE * (Math.random() < 0.3 ? 2 : 1.2), // 卡车 vs 汽车
                             color: COLORS.car[Math.floor(Math.random() * COLORS.car.length)]
                         });
                     }
                 } else if (this.type === 'grass') {
-                    // Add trees (static obstacles)
+                    // 添加树木（静态障碍物）
                     let count = Math.floor(Math.random() * 3);
                     for(let i=0; i<count; i++) {
-                        // Align to grid
+                        // 对齐到网格
                         let col = Math.floor(Math.random() * GRID_COLS);
-                        // Don't block the very center on start
+                        // 不阻挡起始中心位置
                         if(this.gridY === 0 && col === Math.floor(GRID_COLS/2)) continue;
                         
                         this.obstacles.push({
@@ -244,13 +240,11 @@
             }
 
             draw(ctx, yPos) {
-                // Determine lane width to draw (full screen width)
-                
-                // Draw ground
+                // 绘制地面
                 ctx.fillStyle = (this.type === 'road') ? COLORS.road : COLORS.grass;
                 ctx.fillRect(0, yPos, CANVAS_WIDTH, GRID_SIZE);
 
-                // Draw Stripes for road
+                // 为道路绘制条纹
                 if (this.type === 'road') {
                     ctx.strokeStyle = '#fff';
                     ctx.setLineDash([10, 10]);
@@ -263,51 +257,45 @@
                     ctx.setLineDash([]);
                 }
 
-                // Center offset to align the "game grid" to the center of the screen
+                // 中心偏移对齐游戏网格
                 const gridOffsetX = (CANVAS_WIDTH - GRID_COLS * GRID_SIZE) / 2;
 
-                // Draw obstacles
+                // 绘制障碍物
                 this.obstacles.forEach(obs => {
                     let drawX = gridOffsetX + obs.x;
                     
                     if (obs.isTree) {
-                        // Tree
+                        // 树
                         drawX = gridOffsetX + obs.col * GRID_SIZE;
-                        ctx.fillStyle = '#388E3C'; // Dark Green
+                        ctx.fillStyle = '#388E3C'; // 深绿色
                         ctx.fillRect(drawX + 5, yPos + 5, GRID_SIZE - 10, GRID_SIZE - 10);
-                        // Detail
+                        // 细节
                         ctx.fillStyle = '#1B5E20';
                         ctx.fillRect(drawX + 10, yPos + 10, GRID_SIZE - 20, GRID_SIZE - 20);
                     } else {
-                        // Car
+                        // 汽车
                         ctx.fillStyle = obs.color;
                         ctx.fillRect(drawX, yPos + 8, obs.width, GRID_SIZE - 16);
-                        // Details (lights/wheels) simplified
+                        // 细节简化
                         ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                        ctx.fillRect(drawX + 5, yPos + 5, 5, 5); // Wheel
-                        ctx.fillRect(drawX + obs.width - 10, yPos + 5, 5, 5); // Wheel
+                        ctx.fillRect(drawX + 5, yPos + 5, 5, 5); // 车轮
+                        ctx.fillRect(drawX + obs.width - 10, yPos + 5, 5, 5); // 车轮
                     }
                 });
             }
 
             checkCollision(pX, pY) {
-                // pX is grid column. pY is this lane's gridY
-                // Player is approximately at grid center
                 if (this.gridY !== pY) return false;
 
                 const gridOffsetX = (CANVAS_WIDTH - GRID_COLS * GRID_SIZE) / 2;
-                
-                // Player hitbox (world space)
                 const pWorldX = gridOffsetX + pX * GRID_SIZE + 10;
                 const pWidth = GRID_SIZE - 20;
 
                 for(let obs of this.obstacles) {
                     if (obs.isTree) {
-                        // Tree collision is checked before movement usually (grid based), 
-                        // but let's double check here or just rely on move logic
                         if (obs.col === pX) return true;
                     } else {
-                        // Car collision (continuous)
+                        // 汽车碰撞
                         let obsWorldX = gridOffsetX + obs.x;
                         if (pWorldX < obsWorldX + obs.width &&
                             pWorldX + pWidth > obsWorldX) {
@@ -319,7 +307,7 @@
             }
         }
 
-        // Logic
+        // 逻辑
         function init() {
             isGameOver = false;
             score = 0;
@@ -331,18 +319,16 @@
             player.gridY = 0;
             
             lanes = [];
-            // Generate initial lanes
+            // 生成初始车道
             for(let i=0; i<20; i++) {
                 lanes.push(new Lane(i));
             }
         }
 
         function canMoveTo(gx, gy) {
-            // Check boundaries
+            // 检查边界
             if (gx < 0 || gx >= GRID_COLS) return false;
-            // Check trees
-            // Ideally we need to find the lane corresponding to gy
-            // But since lanes are generated dynamically, we need to ensure we have it
+            // 检查树木
             ensureLane(gy);
             const lane = lanes.find(l => l.gridY === gy);
             if (lane) {
@@ -363,15 +349,13 @@
             const targetX = player.gridX + dx;
             const targetY = player.gridY + dy;
             
-            if (targetY < player.gridY - 1) return; // Can't go back too much
+            if (targetY < player.gridY - 1) return; // 不能后退太多
 
             if (canMoveTo(targetX, targetY)) {
-                
-                // Visual jump effect could be added here
                 player.gridX = targetX;
                 player.gridY = targetY;
                 
-                // Score update
+                // 分数更新
                 if (player.gridY > score) {
                     score = player.gridY;
                     document.getElementById('scoreVal').innerText = score;
@@ -383,20 +367,16 @@
         function update() {
             if (isGameOver) return;
             
-            // Clean up old lanes
-            if (lanes.length > 30) {
-                 // Keep lanes around player
-            }
             const activeLanes = lanes.filter(l => l.gridY >= player.gridY - 5 && l.gridY <= player.gridY + 15);
             activeLanes.forEach(l => l.update());
 
-            // Check collision
+            // 检查碰撞
             const currentLane = lanes.find(l => l.gridY === player.gridY);
             if (currentLane && currentLane.checkCollision(player.gridX, player.gridY)) {
                 gameOver();
             }
 
-            // Smooth camera
+            // 平滑相机
             const targetCamY = (player.gridY * GRID_SIZE) - (CANVAS_HEIGHT / 2) + (GRID_SIZE * 2);
             cameraY += (targetCamY - cameraY) * 0.1;
         }
@@ -404,47 +384,12 @@
         function draw() {
             ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
             
-            // Draw lanes
-            // We need to translate world y to screen y
-            // world y = lane.gridY * GRID_SIZE
-            // screen y = CANVAS_HEIGHT - (worldY - cameraY) --- assuming camera moves up
-            // Let's coordinate system: 
-            // Y increases upwards in game logic (0, 1, 2...)
-            // Screen Y increases downwards.
-            // So worldY 0 is at bottom of screen?
-            // Let's standardise: 
-            // Screen Draw Y = (CANVAS_HEIGHT - 100) - (lane.gridY * GRID_SIZE) + cameraY 
-            // This effectively moves the world down as cameraY (player Y) increases? 
-            // No, if player goes up (gridY inc), we want world to move down.
-            // Screen Y = Offset - (lane.gridY * GRID_SIZE) + (cameraY scaled)
-            
-            // Let's center player vertically roughly
-            // Player Screen Y = Constant
-            
             const PlayerScreenY = CANVAS_HEIGHT * 0.6; 
-            // When player.gridY increases, the lane.gridY should map to a higher visual position (lower Screen Y value/Upwards)
-            // wait, Top Down 2D usually Y increases Downwards. But we said "Forward" increases Y.
-            // unique approach: Forward = Up visual = Decreasing Screen Y.
-            
             const baseOffset = PlayerScreenY + (player.gridY * GRID_SIZE); 
             
-            // Draw visible lanes
+            // 绘制车道
             lanes.forEach(lane => {
-                // Screen Y for this lane
-                // layout: gridY=0 is bottom, gridY=1 is above it.
-                // screenY = PlayerScreenY + (player.gridY - lane.gridY) * GRID_SIZE
-                
-                // Smooth camera: use cameraY instead of player.gridY * GRID_SIZE
-                // cameraY approximates player.gridY * GRID_SIZE
-                
-                // Let's use cameraY which tracks player world Y
-                // World Y of lane = lane.gridY * GRID_SIZE
-                // Render Y = PlayerScreenY - (World Y - cameraY)
-                // Wait... if WorldY > CameraY, it should be above (Screen Y smaller)
-                
                 const worldY = lane.gridY * GRID_SIZE;
-                // We track cameraY as (player.gridY * GRID_SIZE)
-                
                 const screenY = PlayerScreenY - (worldY - cameraY);
                 
                 if (screenY > -GRID_SIZE && screenY < CANVAS_HEIGHT) {
@@ -452,24 +397,19 @@
                 }
             });
 
-            // Draw Player
-            // Player X is centered grid
+            // 绘制玩家
             const gridOffsetX = (CANVAS_WIDTH - GRID_COLS * GRID_SIZE) / 2;
             const px = gridOffsetX + player.gridX * GRID_SIZE;
-            
-            // Player Y is calculated same as lane
-            // But we want smooth movement if we had it. For now grid snap:
-            // logic Y = player.gridY * GRID_SIZE
             const py = PlayerScreenY - (player.gridY * GRID_SIZE - cameraY);
             
             ctx.fillStyle = COLORS.chicken;
             ctx.fillRect(px + 10, py + 10, GRID_SIZE - 20, GRID_SIZE - 20);
             
-            // Beak
+            // 喙
             ctx.fillStyle = 'orange';
             ctx.fillRect(px + GRID_SIZE/2 - 5, py + 5, 10, 5);
             
-            // Eyes
+            // 眼睛
             ctx.fillStyle = 'black';
             ctx.fillRect(px + 15, py + 15, 5, 5);
             ctx.fillRect(px + GRID_SIZE - 20, py + 15, 5, 5);
@@ -491,21 +431,21 @@
             init();
         }
 
-        // Input
+        // 输入
         window.addEventListener('keydown', e => {
             if (e.key === 'ArrowUp') move(0, 1);
             else if (e.key === 'ArrowDown') move(0, -1);
             else if (e.key === 'ArrowLeft') move(-1, 0);
             else if (e.key === 'ArrowRight') move(1, 0);
             
-            // Prevent scrolling
+            // 防止滚动
             if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
         });
 
-        // Touch
+        // 触摸
         document.querySelectorAll('.control-btn').forEach(btn => {
             btn.addEventListener('pointerdown', (e) => {
-                e.preventDefault(); // prevent selection
+                e.preventDefault(); // 防止选择
                 const dir = btn.dataset.dir;
                 if (dir === 'up') move(0, 1);
                 if (dir === 'down') move(0, -1);
@@ -514,7 +454,7 @@
             });
         });
 
-        // Start
+        // 开始
         init();
         loop();
     </script>
