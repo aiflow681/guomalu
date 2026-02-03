@@ -2,7 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>过马路小游戏 - H5纯净版</title>
     <style>
         body { 
@@ -22,6 +24,9 @@
             display: block; 
             margin: 0 auto; 
             touch-action: none; /* 防止画布缩放 */
+            width: 100vw !important; /* 固定宽度 */
+            height: 100vh !important; /* 固定高度 */
+            object-fit: contain; /* 保持比例 */
         }
         #ui-layer { 
             position: absolute; 
@@ -163,6 +168,7 @@
         const GRID_COLS = 9; // 奇数保持中心对齐
         let CANVAS_WIDTH, CANVAS_HEIGHT;
         let cameraY = 0;
+        let isResizing = false; // 防止游戏中调整大小
         
         // 资源 / 样式
         const COLORS = {
@@ -178,12 +184,34 @@
         let keys = {};
         
         function resize() {
-            CANVAS_WIDTH = window.innerWidth;
-            CANVAS_HEIGHT = window.innerHeight;
+            // 只在初始化或游戏结束时调整大小
+            if (isResizing) return;
+            
+            const container = canvas.parentElement || document.body;
+            const width = container.clientWidth || window.innerWidth;
+            const height = container.clientHeight || window.innerHeight;
+            
+            // 防止尺寸变化过大（超过20%视为异常）
+            if (CANVAS_WIDTH && CANVAS_HEIGHT) {
+                const widthChange = Math.abs(width - CANVAS_WIDTH) / CANVAS_WIDTH;
+                const heightChange = Math.abs(height - CANVAS_HEIGHT) / CANVAS_HEIGHT;
+                if (widthChange > 0.2 || heightChange > 0.2) {
+                    console.warn('Canvas size change blocked:', widthChange, heightChange);
+                    return; // 阻止异常的尺寸变化
+                }
+            }
+            
+            CANVAS_WIDTH = width;
+            CANVAS_HEIGHT = height;
             canvas.width = CANVAS_WIDTH;
             canvas.height = CANVAS_HEIGHT;
         }
-        window.addEventListener('resize', resize);
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            // 防抖：延迟执行resize，避免频繁调整
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(resize, 250);
+        });
         resize();
 
         // 防止移动端双击/捏合缩放
@@ -215,6 +243,19 @@
                 e.preventDefault();
             }
         }, { passive: false });
+        
+        // 锁定视觉视口（防止移动端浏览器UI导致的缩放）
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', function() {
+                // 检测视口缩放
+                const scale = window.visualViewport.scale;
+                if (scale !== 1) {
+                    console.warn('Viewport scale detected:', scale);
+                    // 尝试重置（某些浏览器支持）
+                    document.body.style.zoom = 1 / scale;
+                }
+            });
+        }
 
         // 类
         class Lane {
@@ -345,6 +386,7 @@
 
         // 逻辑
         function init() {
+            isResizing = true; // 锁定resize
             isGameOver = false;
             score = 0;
             cameraY = 0;
@@ -359,6 +401,11 @@
             for(let i=0; i<20; i++) {
                 lanes.push(new Lane(i));
             }
+            
+            // 初始化完成后解锁resize（延迟以确保稳定）
+            setTimeout(() => {
+                isResizing = false;
+            }, 1000);
         }
 
         function canMoveTo(gx, gy) {
